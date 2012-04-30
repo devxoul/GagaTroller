@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009" 
+					   xmlns:s="library://ns.adobe.com/flex/spark" 
+					   xmlns:mx="library://ns.adobe.com/flex/mx"
+					   initialize="init()">
+	<fx:Script>
+		<![CDATA[
+			import mx.events.FlexEvent;
+			import mx.utils.StringUtil;
+			private var _socket : Socket = new Socket();
+			private var _nickname : String;
+			private var _userKey : String; 
+			
+			private function init() : void
+			{
+				
+			}
+			
+			private function onStartButtonClick( e : MouseEvent ) : void
+			{
+				_socket.addEventListener( Event.CONNECT, onSocketConnect );
+				_socket.addEventListener( ProgressEvent.SOCKET_DATA, onSocketData );
+				_socket.addEventListener( Event.CLOSE, onSocketClose );
+				_socket.connect( "61.97.246.131", 8089 );
+			}
+			
+			private function onSocketConnect( e : Event ) : void
+			{
+				currentState = "chatting";
+				logArea.text = "";
+				
+				send( "A46f" );
+				send( "Labc|###randomchat" );
+			}
+			
+			private function onSocketData( e : ProgressEvent ) : void
+			{
+				var data : String = _socket.readUTFBytes( _socket.bytesAvailable );
+				trace( "[GET]", data );
+				
+				if( data.substr( 0, 2 ) == "LS" )
+				{
+					_nickname = data.split( "|" )[0].split( "LS" )[1];
+					_userKey = data.split( "|" )[1];
+					trace( "[NICKNAME] ", _nickname );
+					trace( "[USER_KEY] ", _userKey );
+					return;
+				}
+				
+				var name : String = data.split( "|" )[1] == _nickname ? "나" : "상대방";
+				var chat : String = data.split( "|" )[2];
+				
+				if( chat == "!)*" )
+				{
+					status = "상대방이 입력중입니다.";
+					return;
+				}
+				
+				logChat( name, chat );
+				status = "";
+			}
+			
+			private function onSocketClose( e : Event ) : void
+			{
+				logChat( "[SYSTEM]", "대화가 종료되었습니다." );
+				currentState = "ready";
+				
+				trace( "close" );
+			}
+			
+			private function onChatInputEnter( e : FlexEvent ) : void
+			{
+				chatInput.appendText( String.fromCharCode( 16 ) );
+				chatInput.text = chatInput.text.split( String.fromCharCode( 16 ) ).join( "" );
+				chat( chatInput.text );
+				chatInput.text = "";
+			}
+			
+			private function chat( msg : String ) : void
+			{
+				if( msg.length == 0 ) return;
+				send( "#" + msg );
+			}
+			
+			private function send( msg : String ) : void
+			{
+				if( !_socket.connected ) return;
+				
+				trace( "[SEND]", msg );
+				_socket.writeUTFBytes( msg );
+				_socket.writeByte( 0 );
+				_socket.flush();
+			}
+			
+			private function logChat( name : String, message : String ) : void
+			{
+				logArea.appendText( name + " : " + message + "\n" );
+			}
+			
+			private function onEndButtonClick( e : MouseEvent ) : void
+			{
+				_socket.close();
+				onSocketClose( null );
+			}
+		]]>
+	</fx:Script>
+	
+	<s:states>
+		<s:State name="ready" />
+		<s:State name="chatting" />
+	</s:states>
+	
+	<s:layout>
+		<s:VerticalLayout paddingLeft="10" paddingTop="10" paddingRight="10" paddingBottom="10" />
+	</s:layout>
+	
+	<s:TextArea id="logArea" width="100%" height="100%" enabled.ready="false" />
+	<s:Button id="startButton" label.ready="시작하기" width="100%" click="onStartButtonClick( event )" includeIn="ready" />
+	<s:TextInput id="chatInput" width="100%" enter="onChatInputEnter( event )" includeIn="chatting" />
+	
+	<s:HGroup width="100%">
+		<s:CheckBox id="repeatCheckBox" label="따라하기" />
+		
+		<s:HGroup width="100%" horizontalAlign="right">
+			<s:Button id="endButton" label="대화 끝내기" enabled.ready="false" click="onEndButtonClick( event )" />
+		</s:HGroup>
+	</s:HGroup>
+</s:WindowedApplication>
