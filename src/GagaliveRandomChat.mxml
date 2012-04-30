@@ -127,7 +127,7 @@
 			
 			private function onSimsimiLoadComplete( e : Event ) : void
 			{
-				setTimeout( chat, Math.random() * 1000 + 500, JSON.parse( e.target.data )["sentence_resp"] );
+				setTimeout( chat, Math.random() * 2000 + 1000, JSON.parse( e.target.data )["sentence_resp"].split( "\n" ).join( " " ) );
 			}
 		]]>
 	</fx:Script>
