@@ -5,18 +5,23 @@
 					   initialize="init()">
 	<fx:Script>
 		<![CDATA[
+			import flash.utils.setTimeout;
+			
 			import mx.events.FlexEvent;
-			import mx.utils.StringUtil;
+			
 			private var _socket : Socket = new Socket();
 			private var _nickname : String;
 			private var _userKey : String; 
+			private var _lastMessageId : String;
+			
+			private var _simsimiLoader : URLLoader = new URLLoader();
 			
 			private function init() : void
 			{
-				
+				_simsimiLoader.addEventListener( Event.COMPLETE, onSimsimiLoadComplete );
 			}
 			
-			private function onStartButtonClick( e : MouseEvent ) : void
+			private function onStartButtonClick( e : MouseEvent = null ) : void
 			{
 				_socket.addEventListener( Event.CONNECT, onSocketConnect );
 				_socket.addEventListener( ProgressEvent.SOCKET_DATA, onSocketData );
@@ -47,17 +52,31 @@
 					return;
 				}
 				
-				var name : String = data.split( "|" )[1] == _nickname ? "나" : "상대방";
-				var chat : String = data.split( "|" )[2];
+				var id : String = data.split( "|" )[0].split( ":" )[1];
+				var isMe : Boolean = data.split( "|" )[1] == _nickname;
+				var name : String = isMe ? "나" : "상대방";
+				var message : String = data.split( "|" )[2];
 				
-				if( chat == "!)*" )
+				if( message == "!)*" )
 				{
 					status = "상대방이 입력중입니다.";
 					return;
 				}
 				
-				logChat( name, chat );
+				logChat( name, message );
 				status = "";
+				
+				if( repeatCheckBox.selected && !isMe && _lastMessageId != id )
+				{
+					chat( message );
+				}
+				
+				if( simsimiCheckBox.selected && !isMe )
+				{
+					_simsimiLoader.load( new URLRequest( "http://www.simsimi.com/func/req?msg=" + message + "&lc=ko" ) );
+				}
+				
+				_lastMessageId = id;
 			}
 			
 			private function onSocketClose( e : Event ) : void
@@ -66,6 +85,8 @@
 				currentState = "ready";
 				
 				trace( "close" );
+				
+				setTimeout( onStartButtonClick, 500 );
 			}
 			
 			private function onChatInputEnter( e : FlexEvent ) : void
@@ -78,7 +99,7 @@
 			
 			private function chat( msg : String ) : void
 			{
-				if( msg.length == 0 ) return;
+				if( !msg || msg.length == 0 ) return;
 				send( "#" + msg );
 			}
 			
@@ -102,6 +123,11 @@
 				_socket.close();
 				onSocketClose( null );
 			}
+			
+			private function onSimsimiLoadComplete( e : Event ) : void
+			{
+				chat( JSON.parse( e.target.data )["sentence_resp"] );
+			}
 		]]>
 	</fx:Script>
 	
@@ -114,12 +140,14 @@
 		<s:VerticalLayout paddingLeft="10" paddingTop="10" paddingRight="10" paddingBottom="10" />
 	</s:layout>
 	
-	<s:TextArea id="logArea" width="100%" height="100%" enabled.ready="false" />
+	<s:TextArea id="logArea" width="100%" height="100%" editable="false" />
 	<s:Button id="startButton" label.ready="시작하기" width="100%" click="onStartButtonClick( event )" includeIn="ready" />
 	<s:TextInput id="chatInput" width="100%" enter="onChatInputEnter( event )" includeIn="chatting" />
 	
 	<s:HGroup width="100%">
 		<s:CheckBox id="repeatCheckBox" label="따라하기" />
+		<s:CheckBox id="simsimiCheckBox" label="심심이" />
+		<s:CheckBox id="autoRestartCheckBox" label="자동재시작" />
 		
 		<s:HGroup width="100%" horizontalAlign="right">
 			<s:Button id="endButton" label="대화 끝내기" enabled.ready="false" click="onEndButtonClick( event )" />
