@@ -73,7 +73,7 @@
 				
 				if( simsimiCheckBox.selected && !isMe )
 				{
-					_simsimiLoader.load( new URLRequest( "http://www.simsimi.com/func/req?msg=" + message + "&lc=ko" ) );
+					_simsimiLoader.load( new URLRequest( "http://www.simsimi.com/func/req?msg=" + escape( encodeURIComponent( message ) ) + "&lc=ko" ) );
 				}
 				
 				_lastMessageId = id;
@@ -86,7 +86,8 @@
 				
 				trace( "close" );
 				
-				setTimeout( onStartButtonClick, 500 );
+				if( autoRestartCheckBox.selected )
+					setTimeout( onStartButtonClick, 500 );
 			}
 			
 			private function onChatInputEnter( e : FlexEvent ) : void
@@ -126,7 +127,7 @@
 			
 			private function onSimsimiLoadComplete( e : Event ) : void
 			{
-				chat( JSON.parse( e.target.data )["sentence_resp"] );
+				setTimeout( chat, Math.random() * 1000 + 500, JSON.parse( e.target.data )["sentence_resp"] );
 			}
 		]]>
 	</fx:Script>
